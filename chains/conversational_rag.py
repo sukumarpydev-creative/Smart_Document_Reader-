@@ -1,3 +1,5 @@
+from langchain_classic.agents import create_openai_functions_agent, AgentExecutor
+from langchain_classic.tools import Tool
 from langchain_classic.memory import ConversationBufferMemory
 from core.logger import logger
 from core.utils import format_docs
@@ -12,34 +14,39 @@ class ConversationalRAG:
         self.memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
         logger.info("Conversational RAG initialized successfully.")
 
+        # ---- RAG TOOL ----
+        def rag_tool_fn(query: str) -> str:
+            docs = self.retriever.invoke(query)
+            return format_docs(docs)
+
+        self.rag_tool = Tool(
+            name="RAGRetriever",
+            func=rag_tool_fn,
+            description="Use this to search relevant document chunks. Input: natural language question.",
+        )
+
+        # ---- AGENT ----
+        self.agent = create_openai_functions_agent(
+            llm=self.llm,
+            tools=[self.rag_tool],
+            prompt=self.prompt_template,  # MUST include {agent_scratchpad}
+        )
+
+        self.executor = AgentExecutor(
+            agent=self.agent,
+            tools=[self.rag_tool],
+            memory=self.memory,  # correct place for memory
+            verbose=False,
+        )
+
     def run(self, query: str) -> str:
         try:
             logger.info(f"User Query: {query}")
 
-            # Load conversation history
-            history = self.memory.load_memory_variables({})
-            chat_history = history.get("chat_history", "")
-
-            # Retrieve relevant chunks
-            docs = self.retriever.invoke(query)
-            context = format_docs(docs)
-
-            # Build prompt
-            formatted_prompt = self.prompt_template.format(
-                chat_history=chat_history,
-                context=context,
-                question=query
-            )
-
-            # Get response
-            response = self.llm.invoke(formatted_prompt)
-            answer = response.content
-
-            # Save conversation
-            self.memory.save_context({"input": query}, {"output": answer})
+            response = self.executor.invoke({"input": query})
 
             logger.info("Response generated successfully.")
-            return answer
+            return response["output"]
 
         except Exception as e:
             logger.error(f"Error in ConversationalRAG: {e}", exc_info=True)
