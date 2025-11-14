@@ -18,17 +18,22 @@ def main():
     llm = create_llm()
     prompt_template = create_prompt()
 
-    rag = ConversationalRAG(vec_store, llm, prompt_template)
+    rag = ConversationalRAG(
+        vector_store=vec_store,
+        llm=llm,
+        prompt_template=prompt_template,
+        top_k=3,
+        summary_store="file"
+    )
 
-    print("\n--- Conversation Start ---")
-    print("User: What is the leave policy?")
-    print("Assistant:", rag.run("What is the leave policy?"))
-
-    print("\nUser: What about maternity leave?")
-    print("Assistant:", rag.run("What about maternity leave?"))
-
-    print("\nUser: Is paternity leave included?")
-    print("Assistant:", rag.run("Is paternity leave included?"))
+    print("\n--- Conversation Start (type 'exit' to quit) ---")
+    while True:
+        user_query = input("\nUser: ")
+        if user_query.lower() in ["exit", "quit"]:
+            print("Exiting...")
+            break
+        print("Assistant:", rag.run(user_query))
 
 if __name__ == "__main__":
     main()
+

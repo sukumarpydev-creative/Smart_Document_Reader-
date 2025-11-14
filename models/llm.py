@@ -4,4 +4,5 @@ from core.config import LLM_MODEL, TEMPERATURE
 
 def create_llm(model: str = LLM_MODEL, temperature: float = TEMPERATURE):
     logger.info(f"Initializing LLM: {model}")
-    return ChatOpenAI(model=model, temperature=temperature)
+    model = ChatOpenAI(model=model, temperature=temperature)
+    return model
