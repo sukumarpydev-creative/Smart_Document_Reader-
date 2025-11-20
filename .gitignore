@@ -1,2 +1,4 @@
 # Excluding the Env files
 .env
+venv
+gitkey
